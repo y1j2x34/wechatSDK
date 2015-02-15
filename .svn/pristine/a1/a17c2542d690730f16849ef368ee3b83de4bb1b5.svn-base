@@ -1,0 +1,15 @@
+package y1j2x34.wechat.pojo;
+/**
+ * 关注用户openid列表数据
+ */
+public class CUsr_Data {
+	private String[] openid;
+
+	public String[] getOpenid() {
+		return openid;
+	}
+
+	public void setOpenid(String[] openid) {
+		this.openid = openid;
+	}
+}

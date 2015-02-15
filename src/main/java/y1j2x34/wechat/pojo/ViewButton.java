@@ -1,0 +1,32 @@
+package y1j2x34.wechat.pojo;
+/**
+ * view 类型菜单，用户点击菜单可以打开链接
+ * @author 杨建新
+ */
+public class ViewButton extends Button{
+	private String type;
+	private String url;
+	public ViewButton() {
+		setType("view");
+	}
+	/**
+	 * 菜单的响应动作类型，目前有click,view两种
+	 * @return
+	 */
+	public String getType() {
+		return type;
+	}
+	public void setType(String type) {
+		this.type = type;
+	}
+	/**
+	 * 网页链接，用户点击菜单后由微信内嵌浏览器打开该链接，不超过256字节
+	 * @return
+	 */
+	public String getUrl() {
+		return url;
+	}
+	public void setUrl(String url) {
+		this.url = url;
+	}
+}

@@ -1,0 +1,19 @@
+package org.yjx.wechat.message.req;
+/**
+ * 自定义菜单点击事件(click,view)
+ * @author 杨建新
+ *
+ */
+public class ReqMenuClickMessage extends ReqEventMessage{
+	private static final long serialVersionUID = -4206546347081432804L;
+	/**
+	 * 在自定义菜单中无此变量
+	 * deprecated at 2014-3-11
+	 */
+	@Deprecated
+	@Override
+	public long getMsgId() {
+		// TODO Auto-generated method stub
+		return super.getMsgId();
+	}
+}

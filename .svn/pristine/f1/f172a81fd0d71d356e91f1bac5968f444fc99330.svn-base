@@ -1,0 +1,780 @@
+package org.yjx.wechat.utils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
+import java.lang.reflect.Field;
+import java.net.MalformedURLException;
+import java.net.URL;
+import java.net.URLEncoder;
+import java.nio.charset.Charset;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.UUID;
+import java.util.Map.Entry;
+import java.util.Set;
+
+import javax.imageio.ImageIO;
+import javax.imageio.stream.ImageInputStream;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.log4j.Logger;
+import org.yjx.utils.NetUtils;
+import org.yjx.utils.NetUtils.ReadOnlyConnection;
+import org.yjx.utils.NetUtils.RequestParams;
+import org.yjx.utils.NetUtils.Response;
+import org.yjx.utils.RequestException;
+import org.yjx.utils.StringUtils;
+
+import org.yjx.wechat.AppContext;
+import org.yjx.wechat.Credential;
+import org.yjx.wechat.expt.WeChatException;
+import org.yjx.wechat.message.svc.SvBaseMessage;
+import org.yjx.wechat.pojo.AccessToken;
+import org.yjx.wechat.pojo.BaseGroup;
+import org.yjx.wechat.pojo.Button;
+import org.yjx.wechat.pojo.CUsr_Data;
+import org.yjx.wechat.pojo.ComplexButton;
+import org.yjx.wechat.pojo.ConcernedUsers;
+import org.yjx.wechat.pojo.EventButton;
+import org.yjx.wechat.pojo.Groups;
+import org.yjx.wechat.pojo.MediaData;
+import org.yjx.wechat.pojo.Menu;
+import org.yjx.wechat.pojo.Ticket;
+import org.yjx.wechat.pojo.URLMediaData;
+import org.yjx.wechat.pojo.UploadResult;
+import org.yjx.wechat.pojo.UserGroup;
+import org.yjx.wechat.pojo.ViewButton;
+import org.yjx.wechat.pojo.WeChatUser;
+
+public class WeChatUtil {
+	
+	private static final String ACCESS_TOKEN_NAME = "access_token";
+	private static final String ERRCODE = "errcode";
+	private static final String ERRMSG = "errmsg";
+	
+	private static final String GET_ACCESS_TOKEN_URL = "https://api.weixin.qq.com/cgi-bin/token";
+	private static final String MENU_CREATE_URL = "https://api.weixin.qq.com/cgi-bin/menu/create?access_token=";
+	private static final String USR_INF_URL = "https://api.weixin.qq.com/cgi-bin/user/info";
+	private static final String USR_LIST_URL = "https://api.weixin.qq.com/cgi-bin/user/get";
+	private static final String CREATE_NEW_GROUP_URL = "https://api.weixin.qq.com/cgi-bin/groups/create";
+	private static final String GET_GROUP_ID_URL = "https://api.weixin.qq.com/cgi-bin/groups/getid";
+	private static final String GET_ALL_GROUPS_URL = "https://api.weixin.qq.com/cgi-bin/groups/get"; 
+	private static final String MOVE_USR_GROUP_URL = "https://api.weixin.qq.com/cgi-bin/groups/members/update";
+	private static final String RENAME_USR_GROUP_URL = "https://api.weixin.qq.com/cgi-bin/groups/update";
+	private static final String SEND_SERVICE_NEWS_MESSAGE_URL = "https://api.weixin.qq.com/cgi-bin/message/custom/send";
+	private static final String GET_OPENID_BY_CODE = "https://api.weixin.qq.com/sns/oauth2/access_token?";
+	private static final String GET_USER_MENUS_URL = "https://api.weixin.qq.com/cgi-bin/menu/get";
+	private static final String DELETE_MENU_URL = "https://api.weixin.qq.com/cgi-bin/menu/delete";
+	private static final String DOWNLOAD_MEDIA_URL = "http://file.api.weixin.qq.com/cgi-bin/media/get";
+	private static final String CREATE_QRCODE_URL = "https://api.weixin.qq.com/cgi-bin/qrcode/create";
+	private static final String SHOW_QRCODE_URL = "https://mp.weixin.qq.com/cgi-bin/showqrcode";
+	private static final String UPLOAD_MEDIA_URL = "http://file.api.weixin.qq.com/cgi-bin/media/upload?";
+	private static final Logger LOG = Logger.getLogger(WeChatUtil.class);
+	/**
+	 * 获取通用接口凭证
+	 * @param appid
+	 * @param appsecret
+	 * @return
+	 * @throws Exception
+	 */
+	public static AccessToken getAccessToken(Credential credential)throws WeChatException,RequestException,IOException{
+		if(credential == null){
+			throw new IllegalArgumentException("credential == null");
+		}
+		AccessToken access_token = null;
+		RequestParams param = new RequestParams();
+		param
+		.setUrl(GET_ACCESS_TOKEN_URL)
+		.addQuery("grant_type","client_credential")
+		.addQuery("appid",credential.getAppId())
+		.addQuery("secret",credential.getAppSecret());
+		
+		String result = NetUtils.get(param).getResponseText(AppContext.getInstance().getCharset());
+		
+		LOG.info("获取access_token: "+result);
+		JSONObject jo = check_null_errcode_result(result);
+		access_token = new AccessToken();
+		access_token.setToken(jo.getString(ACCESS_TOKEN_NAME));
+		access_token.setExpiresIn(jo.getInt("expires_in"));
+		return access_token;
+	}
+	/**
+	 * 获取关注的用户列表
+	 * <hr/>
+	 * @param token
+	 * @param next_openid
+	 * @return
+	 * @throws Exception
+	 */
+	public static ConcernedUsers getCUsrs(AccessToken token,String next_openid)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		checkNull(next_openid, "next_openid == null");
+		
+		RequestParams params = new RequestParams();
+		params.setUrl(USR_LIST_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		if(next_openid != null){
+			params.addQuery("next_openid",next_openid);
+		}
+		Response resp = NetUtils.get(params);
+		
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		
+		JSONObject jo = check_null_errcode_result(result);
+		
+		ConcernedUsers users = new ConcernedUsers();
+		users.setCount(jo.getInt("count"));
+		users.setTotal(jo.getInt("total"));
+		users.setNext_openid(jo.getString("next_openid"));
+		users.setData(new CUsr_Data());
+		
+		JSONObject jdata = jo.getJSONObject("data");
+		
+		@SuppressWarnings("unchecked")
+		ArrayList<Object> arr = new ArrayList<Object>(jdata.getJSONArray("openid"));
+		String[] openid = new String[arr.size()];
+		arr.toArray(openid);
+		
+		users.getData().setOpenid(openid);
+		return users;
+	}
+	/**
+	 * 通过openid获得用户信息
+	 * <hr/>
+	 * @param openid
+	 * @param token
+	 * @return
+	 * @throws Exception
+	 */
+	public static WeChatUser getUser(String openid,AccessToken token)throws WeChatException,RequestException,IOException{
+		checkNull(openid, "openid == null");
+		checkToken(token);
+		
+		RequestParams param = new RequestParams();
+		param.setUrl(USR_INF_URL)
+		.addQuery(ACCESS_TOKEN_NAME, token.getToken())
+		.addQuery("openid", openid);
+		
+		Response resp = NetUtils.get(param);
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		
+		LOG.info("获取"+openid+"的用户信息返回结果："+result);
+		
+		JSONObject jo = check_null_errcode_result(result);
+		
+		WeChatUser user = new WeChatUser();
+		user.setSubscribe(jo.getInt("subscribe")==1);
+		jo.remove("subscribe");
+		String headimgurl = jo.getString("headimgurl");
+		
+		user.setHeadimgsize(getImageSize(headimgurl));
+		
+		user.setSubscribe_time(jo.getLong("subscribe_time"));
+		jo.remove("subscribe_time");
+		@SuppressWarnings("unchecked")
+		Set<Entry<String,Object>> entrySet = jo.entrySet();
+		for(Entry<String,Object> entry:entrySet){
+			try {
+				Field f = WeChatUser.class.getDeclaredField(entry.getKey());
+				f.setAccessible(true);
+				if(f.getType() == String.class){
+					f.set(user, jo.getString(entry.getKey()));
+				}else if(f.getType() == int.class){
+					f.set(user,jo.getInt(entry.getKey()));
+				}else{
+					LOG.info("无法转换"+f.getName()+",类型："+f.getType().getName()+",键："+entry.getKey()+"，值："+entry.getValue());
+				}
+			} catch (Exception e) {}
+		}
+		return user;
+	}
+	/**
+	 * 根据图片url获取图片大小，
+	 * @param imageUrl
+	 * @return -1 表示 获取失败
+	 */
+	public static int getImageSize(String imageUrl){
+		if(imageUrl != null && imageUrl.length() > 0)
+		{
+			int li = imageUrl.lastIndexOf('/');
+			if(li != -1){
+				try {
+					int s = Integer.parseInt(imageUrl.substring(li+1));
+					return s==0?640:s;
+				} catch (NumberFormatException e) {
+					return 640;
+				}
+			}
+		}
+		return -1;
+	}
+	/**
+	 * 创建分组
+	 * @param name
+	 * @param token
+	 * @return
+	 * @throws HttpsRequestException
+	 * @throws Exception
+	 */
+	public static BaseGroup createNewGroup(String name,AccessToken token)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		checkNull(name, "name == null");
+		JSONObject grp = new JSONObject();
+		grp.put("name", name);
+		JSONObject postData = new JSONObject();
+		postData.put("group", grp);
+		
+		RequestParams params = new RequestParams();
+		params.setUrl(CREATE_NEW_GROUP_URL)
+		.addQuery(ACCESS_TOKEN_NAME, token.getToken())
+		.setPostData(postData.toString().getBytes(AppContext.getInstance().getCharset()));
+		
+		Response resp = NetUtils.post(params);
+		
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		
+		JSONObject jo = check_null_errcode_result(result);
+		String nname = jo.getString("name");
+		BaseGroup ngroup = new BaseGroup();
+		ngroup.setId(jo.getInt("groupid"));
+		ngroup.setName(nname);
+		return ngroup;
+	}
+	/**
+	 * 查询所有分组
+	 * <hr/>
+	 * @param token
+	 * @return
+	 * @throws Exception
+	 */
+	public static Groups getAllGroups(AccessToken token)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		RequestParams params = new RequestParams();
+		params.setUrl(GET_ALL_GROUPS_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		Response resp = NetUtils.get(params);
+		
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		
+		JSONObject jo = check_null_errcode_result(result);
+		
+		@SuppressWarnings("unchecked")
+		List<JSONObject> grps = (List<JSONObject>)jo.getJSONArray("groups");
+		UserGroup[] groups = new UserGroup[grps.size()];
+		int i = 0;
+		for(JSONObject m:grps){
+			UserGroup grp = new UserGroup();
+			grp.setCount(m.getInt("count"));
+			grp.setId(m.getInt("id"));
+			grp.setName(m.getString("name"));
+			groups[i] = grp;
+			i++;
+		}
+		Groups rgps = new Groups();
+		rgps.setGroups(groups);
+		return rgps;
+	}
+	/**
+	 * 获得某个用户所在分组的ID
+	 * <hr/>
+	 * @param openid
+	 * @param token
+	 * @return 用户所在的分组ID
+	 * @throws Exception
+	 */
+	public static int getUserGroupId(String openid,AccessToken token)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		checkNull(openid, "openid == null");
+		JSONObject pdata = new JSONObject();
+		pdata.put("openid", openid);
+		RequestParams params = new RequestParams(GET_GROUP_ID_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		params.setPostData(pdata.toString().getBytes(AppContext.getInstance().getCharset()));
+		
+		Response resp = NetUtils.post(params);
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		
+		JSONObject jo = check_null_errcode_result(result);
+		return jo.getInt("groupid");
+	}
+	/**
+	 * 移动用户分组
+	 * <hr/>
+	 * @param openid
+	 * @param to_groupid
+	 * @param token
+	 * @return 0表示移动成功，其它则反 
+	 * @throws Exception
+	 */
+	public static int mvUserGroup(String openid,int to_groupid,AccessToken token)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		checkNull(openid, "openid == null");
+		
+		JSONObject postdata = new JSONObject();
+		postdata.put("openid", openid);
+		postdata.put("to_groupid", to_groupid);
+		
+		RequestParams params = new RequestParams(MOVE_USR_GROUP_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		params.setPostData(postdata.toString().getBytes(AppContext.getInstance().getCharset()));
+		Response resp = NetUtils.post(params);
+		String result = resp.getResponseText(AppContext.getInstance().getCharset());
+		JSONObject jo = check_zero_errcode_result(result);
+		
+		return jo.getInt(ERRCODE);
+	}
+	/**
+	 * 修改分组名称
+	 * <hr/>
+	 * @param groupid
+	 * @param newName
+	 * @param token
+	 * @return 错误码，为0表示修改成功，其它的则相反
+	 * @throws WeChatException	返回错误码
+	 * @throws RequestException
+	 * @throws IOException
+	 */
+	public static int renameUsrGroup(int groupid,String newName,AccessToken token)throws WeChatException,RequestException,IOException{
+		checkToken(token);
+		checkNull(newName,"newName = null");
+		BaseGroup group = new BaseGroup();
+		group.setId(groupid);
+		group.setName(newName);
+		JSONObject postData = new JSONObject();
+		postData.put("group", group);
+		
+		Charset charset = AppContext.getInstance().getCharset(); 
+		RequestParams params = new RequestParams(RENAME_USR_GROUP_URL);
+		
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken())
+		.setPostData(postData.toString().getBytes(charset));
+		
+		Response resp = NetUtils.post(params);
+		String result = resp.getResponseText(charset);
+		
+		JSONObject jo = check_zero_errcode_result(result);
+		return jo.getInt(ERRCODE);
+	}
+	/**
+	 * 用来检查返回结果中errcode为null才正确的情况
+	 */
+	private static JSONObject check_null_errcode_result(String result)throws WeChatException{
+		JSONObject jo = JSONObject.fromObject(result);
+		if(jo.containsKey(ERRCODE)){
+			int errorCode = jo.getInt(ERRCODE);
+			LOG.error(jo.getString(ERRMSG));
+			throw new WeChatException(errorCode);
+		}else{
+			LOG.info(result);
+		}
+		return jo;
+	}
+	/**
+	 * 用来检查返回结果中errcode为0才正确的情况
+	 */
+	private static JSONObject check_zero_errcode_result(String result)throws WeChatException{
+		JSONObject jo = JSONObject.fromObject(result);
+		int errcode = jo.getInt(ERRCODE);
+		if(errcode == 0){
+			LOG.info(jo.getString(ERRMSG));
+		}else{
+			LOG.error(jo.getString(ERRMSG));
+			throw new WeChatException(errcode);
+		}
+		return jo;
+	}
+	/**
+	 * 创建菜单
+	 * <hr/>
+	 * @param menu 菜单实例
+	 * @param accessToken 凭证
+	 * @throws WeChatException 创建异常
+	 * @throws RequestException 请求异常，可能网络有问题
+	 * @throws IOException		数据读取错误
+	 */
+	public static void createMenu(Menu menu,AccessToken accessToken)throws WeChatException,RequestException,IOException{
+		Charset charset = AppContext.getInstance().getCharset();
+		RequestParams params = new RequestParams(MENU_CREATE_URL+accessToken.getToken());
+		params.setPostData(JSONObject.fromObject(menu).toString().getBytes(charset));
+		
+		String responseData = NetUtils.post(params).getResponseText(charset);
+		JSONObject jr = JSONObject.fromObject(responseData);
+		
+		int errcode = jr.getInt(ERRCODE);
+		
+		if(errcode != 0){
+			LOG.error("创建菜单失败："+responseData);
+			throw new WeChatException(errcode);
+		}
+	}
+	/**
+	 * 查询菜单
+	 * @param accessToken	通用接口凭证
+	 * @return
+	 * @throws WeChatException
+	 * @throws RequestException
+	 * @throws IOException
+	 */
+	public static Menu getMenu(AccessToken accessToken)throws WeChatException,RequestException,IOException{
+		
+		Charset charset = AppContext.getInstance().getCharset();
+		RequestParams params = new RequestParams(GET_USER_MENUS_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, accessToken.getToken());
+		
+		String responseData = NetUtils.post(params).getResponseText(charset);
+		
+		JSONObject jo = check_null_errcode_result(responseData);
+		
+		Menu menu = new Menu();
+		
+		JSONObject jmenu = jo.getJSONObject("menu");
+		
+		JSONArray jbuttons = jmenu.getJSONArray("button");
+		
+		List<Button> buttons = parseBtns(jbuttons);
+		menu.setButton(buttons.toArray(new Button[buttons.size()]));
+		return menu;
+	}
+	private static List<Button> parseBtns(JSONArray jarr){
+		List<Button> buttons = new ArrayList<Button>(jarr.size());
+		for(Object item:jarr){
+			if(!(item instanceof JSONObject)){
+				continue;
+			}
+			JSONObject jitem = (JSONObject)item;
+			Button btn = parseBtn(jitem);
+			buttons.add(btn);
+		}
+		return buttons;
+	}
+	@SuppressWarnings("deprecation")
+	private static Button parseBtn(JSONObject item){
+		if(item.containsKey("type")){
+			String type = item.getString("type");
+			if("click".equals(type)){
+				EventButton ebtn = new EventButton();
+				ebtn.setKey(item.getString("key"));
+				ebtn.setType(type);
+				ebtn.setName(item.getString("name"));
+				return ebtn;
+			}else if("view".equals(type)){
+				ViewButton vbtn = new ViewButton();
+				vbtn.setType(type);
+				vbtn.setName(item.getString("name"));
+				vbtn.setUrl(item.getString("url"));
+				return vbtn;
+			}
+		}else{
+			Button btn = new ComplexButton();
+			btn.setName(item.getString("name"));
+			List<Button> btns = parseBtns(item.getJSONArray("sub_button"));
+			((ComplexButton)btn).setSub_button(btns.toArray(new Button[btns.size()]));
+			return btn;
+		}
+		return null;
+	}
+	private static final void checkToken(AccessToken token){
+		if(token == null || token.getToken() == null){
+			throw new IllegalArgumentException("token == null");
+		}
+	}
+	private static final void checkNull(Object obj,String message){
+		if(obj == null){
+			throw new IllegalArgumentException(message);
+		}
+	}
+	/**
+	 * 删除菜单（全部）
+	 * @param token 接口调用凭证
+	 * throws WechatException
+	 * throws RequestException
+	 * throws IOException
+	 */
+	public static void deleteMenu(AccessToken token) throws WeChatException,RequestException,IOException{
+		RequestParams params = new RequestParams(DELETE_MENU_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		Response resp = NetUtils.get(params);
+		String respText = resp.getResponseText(AppContext.getInstance().getCharset());
+		check_zero_errcode_result(respText);
+	}
+	/**
+	 * 发送客服消息
+	 * @param msg 消息
+	 * @param token
+	 */
+	public static void sendServiceNews(SvBaseMessage msg,AccessToken token)throws RequestException,WeChatException,IOException{
+		JSONObject data = JSONObject.fromObject(msg);
+		Response response = NetUtils.post(
+				new RequestParams(SEND_SERVICE_NEWS_MESSAGE_URL)
+				.addQuery(ACCESS_TOKEN_NAME, token.getToken())
+				.setPostData(
+						data.toString().getBytes(AppContext.getInstance().getCharset()))
+				);
+		check_zero_errcode_result(response.getResponseText(AppContext.getInstance().getCharset()));
+	}
+	/**
+	 * oauth 网页授权 获得用户 openid 
+	 * @param code			网页上传过来的code（由微信生成）
+	 * @param credential	开发者凭证
+	 * @return
+	 * @throws RequestException	请求微信服务器异常（网络异常）
+	 * @throws WeChatException	请求返回错误码
+	 * @throws IOException		读取返回消息异常
+	 */
+	public static String getOpenidByCode(String code,Credential credential) throws RequestException,WeChatException,IOException{
+		String openid = null;
+		RequestParams params = new RequestParams(GET_OPENID_BY_CODE);
+		params.addQuery("appid", credential.getAppId());
+		params.addQuery("secret", credential.getAppSecret());
+		params.addQuery("code", code);
+		params.addQuery("grant_type", "authorization_code");
+		Response response = NetUtils.get(params);
+		JSONObject jo = check_null_errcode_result(response.getResponseText(AppContext.getInstance().getCharset()));
+		openid = jo.getString("openid");
+		return openid;
+	}
+	/**
+	 * 用于获得多媒体文件响应信息
+	 * @param media_id 媒体ID
+	 * @param token 接口调用凭证
+	 * @return
+	 * @throws RequestException	请求网络异常
+	 */
+	public static Response getMediaResponse(String media_id,AccessToken token) throws RequestException{
+		RequestParams req = new RequestParams();
+		req.setUrl(DOWNLOAD_MEDIA_URL);
+		req.addQuery("access_token", token.getToken());
+		req.addQuery("media_id", media_id);
+		return NetUtils.get(req);
+	}
+	
+	public static enum UploadType{
+		/**图片*/
+		image,
+		/**语音*/
+		voice,
+		/**视频*/
+		video,
+		/** 缩略图*/
+		thumb;
+	}
+	/**
+	 * 
+	 * 上传多媒体
+	 * <p>
+	 * <b>注意事项</b>
+	 * <p>
+	 * 上传的多媒体文件有格式和大小限制，如下：
+	 * <ul>
+	 *	<li>图片（image）: 128K，支持JPG格式</li>
+	 *	<li>语音（voice）：256K，播放长度不超过60s，支持AMR\MP3格式</li>
+	 *	<li>视频（video）：1MB，支持MP4格式</li>
+	 *	<li>缩略图（thumb）：64KB，支持JPG格式</li>
+	 *</ul>
+	 * <strong>媒体文件在后台保存时间为3天，即3天后media_id失效。</strong>
+	 * </p>
+	 * </p>
+	 * @param type	多媒体类型
+	 * @param token 接口调用凭证
+	 * @param media 媒体数据流
+	 * @return 上传成功结果
+	 * @throws RequestException
+	 * @throws IOException 
+	 * @throws WeChatException
+	 */
+	public static UploadResult uploadMedia(UploadType type,AccessToken token,InputStream media)throws RequestException,IOException,WeChatException{
+		checkToken(token);
+		checkNull(type, "type == null");
+		
+		RequestParams params = new RequestParams(UPLOAD_MEDIA_URL);
+		
+		params.addQuery("type", type.name());
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		
+		params.setDataStream(media);
+		
+		Response resp = NetUtils.post(params);
+		
+		JSONObject result = check_null_errcode_result(resp.getResponseText(AppContext.getInstance().getCharset()));
+		
+		UploadResult ur = new UploadResult();
+		
+		ur.setType(result.getString("type"));
+		ur.setMedia_id(result.getString("media_id"));
+		ur.setCreated_at(result.getLong("created_at"));
+		return ur;
+	}
+	/**
+	 * 多媒体下载
+	 * @param mediaId
+	 * @param token
+	 * @return
+	 * @throws WeChatException
+	 * @throws RequestException
+	 * @throws IOException
+	 */
+	public static final MediaData downloadMediaById(String mediaId,AccessToken token)throws WeChatException,RequestException,IOException{
+		Response resp = getMediaResponse(mediaId, token);
+		ReadOnlyConnection conn = resp.getConnection();
+		String contentType = conn.getContentType();
+		if(StringUtils.equalsIgnoreCase(contentType, "text/plain")){
+			throw new WeChatException(JSONObject.fromObject(resp.getResponseText(AppContext.getInstance().getCharset())).getInt(ERRCODE));
+		}
+		String cd = conn.getHeaderField("Content-disposition");
+		String fileName = StringUtils.substringBetween(cd, "\"", "\"");
+		String sdate = conn.getHeaderField("Date");
+		MediaData md = new MediaData();
+		
+		@SuppressWarnings("deprecation")
+		long d = Date.parse(sdate);
+		
+		md.setDate(new Date(d));
+		
+		md.setFileName(fileName);
+		md.setContentLength(conn.getContentLength());
+		md.setStream(resp.getStream());
+		return md;
+	}
+	/**
+	 * 通过url下载图片
+	 * @param url
+	 * @return
+	 * @throws RequestException 
+	 */
+	public static URLMediaData downloadMediaFromURL(String url) throws RequestException{
+		Response resp = NetUtils.get(new RequestParams(url));
+		URLMediaData idata = new URLMediaData();
+		int size = getImageSize(url);
+		idata.setPicSize(size);
+		idata.setContentLength(resp.getConnection().getContentLength());
+		idata.setStream(resp.getStream());
+		try {
+			String p = new URL(url).getPath();
+			idata.setFileName(p.substring(1));
+		} catch (MalformedURLException e) {
+			idata.setFileName(UUID.randomUUID().toString());
+		}
+		return idata;
+	}
+	/**
+	 * 创建临时二维码Ticket
+	 * @param token		接口调用凭证
+	 * @param sceneId	场景值ID，临时二维码时为32位非0整型。
+	 * @param expireSeconds	该二维码有效时间，以秒为单位。 最大不超过1800。
+	 * @throws RequestException
+	 * @throws WeChatException
+	 * @throws IOException
+	 * 
+	 */
+	public static Ticket createTemporaryQRCode(int sceneId,int expireSeconds,AccessToken token) throws WeChatException,RequestException,IOException{
+		if(expireSeconds < 0 || expireSeconds > 1800){
+			throw new IllegalArgumentException("expire_seconds out of bounds[0 1800]:"+expireSeconds);
+		}
+		RequestParams params = new RequestParams(CREATE_QRCODE_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		JSONObject jo = new JSONObject();
+		jo.put("expire_seconds", expireSeconds);
+		jo.put("action_name", "QR_SCENE");
+		JSONObject aifo = new JSONObject();
+		JSONObject scene = new JSONObject();
+		scene.put("scene_id", sceneId);
+		aifo.put("scene", scene);
+		jo.put("action_info", aifo);
+		params.setPostData(jo.toString().getBytes());
+		
+		Response resp = NetUtils.post(params);
+		
+		JSONObject result = check_null_errcode_result(resp.getResponseText(AppContext.getInstance().getCharset()));
+		Ticket ticket = new Ticket();
+		ticket.setExpire_seconds(result.getInt("expire_seconds"));
+		ticket.setTicket(result.getString("ticket"));
+		return ticket;
+	}
+	/**
+	 * 创建永久二维码Ticket
+	 * @param token
+	 * @param sceneId	场景值ID，永久二维码最大值为100000（目前参数只支持1--100000）
+	 * @throws RequestException
+	 * @throws WeChatException
+	 * @throws IOException
+	 * @return 
+	 */
+	public static Ticket createPermanentQRCode(int sceneId,AccessToken token) throws WeChatException,RequestException,IOException{
+		if(sceneId < 1 || sceneId > 100000){
+			throw new IllegalArgumentException("sceneId out of bounds[1,100000]:"+sceneId);
+		}
+		RequestParams params = new RequestParams(CREATE_QRCODE_URL);
+		params.addQuery(ACCESS_TOKEN_NAME, token.getToken());
+		JSONObject jo = new JSONObject();
+		jo.put("action_name", "QR_SCENE");
+		JSONObject aifo = new JSONObject();
+		JSONObject scene = new JSONObject();
+		scene.put("scene_id", sceneId);
+		aifo.put("scene", scene);
+		jo.put("action_info", aifo);
+		params.setPostData(jo.toString().getBytes());
+		
+		Response resp = NetUtils.post(params);
+		
+		JSONObject result = check_null_errcode_result(resp.getResponseText(AppContext.getInstance().getCharset()));
+		Ticket ticket = new Ticket();
+		ticket.setExpire_seconds(result.getInt("expire_seconds"));
+		ticket.setTicket(result.getString("ticket"));
+		return ticket;
+	}
+	
+	/**
+	 * 通过ticket换取二维码
+	 * @param ticket 二维码ticket 可以从 {@link #createTemporaryQRCode(int, int, AccessToken)}或 {@link #createPermanentQRCode(int, AccessToken)}获得
+	 * @return 二维码图片数据流。错误情况下如（ticket非法）则返回空或抛出异常
+	 * @throws RequestException
+	 * @throws IOException
+	 */
+	public static ImageInputStream showQRCode(Ticket ticket) throws RequestException,IOException{
+		if(ticket == null){
+			throw new IllegalArgumentException("ticket == null");
+		}
+		RequestParams params = new RequestParams(SHOW_QRCODE_URL);
+		params.addQuery("ticket", ticket.getTicket());
+		
+		Response resp = NetUtils.post(params);
+		
+		if(resp.getStatusCode() == 200){
+			ImageInputStream ii = ImageIO.createImageInputStream(resp.getStream());
+			return ii;
+		}else{
+			return null;
+		}
+	}
+	/**
+	 * 构造授权页面地址
+	 * @param appid 公众号标识
+	 * @param redirectUrl 重定向的回调链接地址
+	 * @param state	参数 只能是a-zA-Z0-9的值 可以不填
+	 * @return
+	 */
+	public static final String createAuthUrl(String appid,String redirectUrl,String state){
+		StringBuilder sb = new StringBuilder("https://open.weixin.qq.com/connect/oauth2/authorize?appid=");
+		sb.append(appid);
+		sb.append("&redirect_uri=");
+		try {
+			sb.append(URLEncoder.encode(redirectUrl,"UTF-8"));
+		} catch (UnsupportedEncodingException e) {}
+		
+		sb.append("&response_type=code&scope=snsapi_base");
+		if(state != null){
+			if(state.matches("[a-zA-Z0-9]+")){
+				sb.append("&state=");
+				sb.append(state);
+			}else{
+				throw new IllegalArgumentException("state参数只能是a-zA-Z0-9的值");
+			}
+		}
+		sb.append("#wechat_redirect");
+		return sb.toString();
+	}
+}

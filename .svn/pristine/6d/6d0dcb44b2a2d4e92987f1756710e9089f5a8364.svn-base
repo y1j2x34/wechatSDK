@@ -1,0 +1,18 @@
+package y1j2x34.wechat.pojo;
+/**
+ * 用户分组模型
+ */
+public class UserGroup extends BaseGroup{
+	
+	private int count;
+	/**
+	 * 分组内用户数量
+	 * @return
+	 */
+	public int getCount() {
+		return count;
+	}
+	public void setCount(int count) {
+		this.count = count;
+	}
+}

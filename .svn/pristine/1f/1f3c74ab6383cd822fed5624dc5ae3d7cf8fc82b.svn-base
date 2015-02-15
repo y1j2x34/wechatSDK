@@ -1,0 +1,70 @@
+package org.yjx.wechat;
+
+import java.nio.charset.Charset;
+
+import org.apache.log4j.Logger;
+
+import org.yjx.wechat.pojo.AccessToken;
+/**
+ * 应用上下文，用来获取微信公众平台应用的全局信息
+ * @author 杨建新
+ */
+public abstract class AppContext {
+	protected static final Logger LOG = Logger.getLogger(AppContext.class);
+	/**
+	 * 用于获得当前微信应用的url
+	 * @see #data(String)
+	 */
+	public static final String DATA_BASE_PATH = "basePath";
+	private static final class Holder{
+		private static volatile boolean initial = false;
+		private static AppContext INSTANCE;
+	}
+	@SuppressWarnings("unused")
+	private static void init(AppContext o){
+		if(Holder.initial){
+			return;
+		}
+		Holder.INSTANCE = o;
+		Holder.initial = true;
+	}
+	public static AppContext getInstance(){
+		return Holder.INSTANCE;
+	}
+	/**
+	 * 微信接口调用返回消息编码
+	 * @return 
+	 */
+	public abstract Charset getCharset();
+	
+	/**
+	 * 用于本地存储微信消息的根目录,如果不需要，可以不设置
+	 * @return
+	 */
+	public abstract String getRootFolder();
+	/**
+	 * 全局唯一票据，公众号调用各接口时都需使用access_token。正常情况下access_token有效期为7200秒
+	 * @param creadential 公众平台开发则凭证信息
+	 * @return
+	 */
+	public abstract AccessToken getAccessToken(Credential creadential);
+	/**
+	 * 获取全局变量
+	 * @param id 变量名
+	 * @return 变量值，不存在时返回<code>null</code>
+	 */
+	public abstract <D> D data(String id);
+	/**
+	 * 设置全局变量
+	 * @param id 变量名
+	 * @param data 变量值
+	 * @return
+	 */
+	public abstract Object data(String id,Object data);
+	/**
+	 * 公众号每次调用接口时，可能获得正确或错误的返回码，开发者可以根据返回码信息调试接口
+	 * @param code 返回码
+	 * @return 返回码信息
+	 */
+	public abstract String wechat_return_msg(int code);
+}

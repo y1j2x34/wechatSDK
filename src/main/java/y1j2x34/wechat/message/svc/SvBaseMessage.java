@@ -1,0 +1,34 @@
+package y1j2x34.wechat.message.svc;
+
+import y1j2x34.wechat.message.Message;
+
+/**
+ * 客服消息基类
+ * 用户主动发送消息后 48小时之内（目前） 可以向用户发送客服消息，次数不限
+ * @author 杨建新
+ * @date 2013-12-30
+ */
+public class SvBaseMessage extends Message{
+	private static final long serialVersionUID = -7568866133343300008L;
+	
+	private String touser;
+	private String msgtype;
+	public String getTouser() {
+		return touser;
+	}
+	/**
+	 * 普通用户openid
+	 */
+	public void setTouser(String touser) {
+		this.touser = touser;
+	}
+	public String getMsgtype() {
+		return msgtype;
+	}
+	/**
+	 * 消息类型
+	 */
+	public void setMsgtype(String msgtype) {
+		this.msgtype = msgtype;
+	}
+}

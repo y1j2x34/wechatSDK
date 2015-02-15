@@ -1,0 +1,9 @@
+package org.yjx.wechat;
+
+import org.yjx.wechat.expt.UnknownMsgTypeException;
+import org.yjx.wechat.message.req.ReqBaseMessage;
+import org.yjx.wechat.message.resp.RespBaseMessage;
+
+public interface WeChatMessageProcessor {
+	RespBaseMessage execute(ReqBaseMessage reqMsg,Object data)throws UnknownMsgTypeException;
+}

@@ -1,0 +1,18 @@
+package y1j2x34.wechat.pojo;
+
+/**
+ * 自定义菜单
+ * @see Button
+ * @author 杨建新
+ */
+public class Menu {
+	private Button[] button;
+
+	public Button[] getButton() {
+		return button;
+	}
+
+	public void setButton(Button[] button) {
+		this.button = button;
+	}
+}

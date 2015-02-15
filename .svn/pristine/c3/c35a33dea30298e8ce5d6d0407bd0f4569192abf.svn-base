@@ -1,0 +1,38 @@
+package org.yjx.wechat.pojo;
+/**
+ * 微信通用接口凭证
+ * @author 杨建新
+ * @date 2013-12-26
+ */
+public class AccessToken {
+	private String token;
+	private int expiresIn;
+	/**
+	 * @return 凭证
+	 * @see #setToken(String)
+	 */
+	public String getToken() {
+		return token;
+	}
+	/**
+	 * @param token
+	 * @see #getToken()
+	 */
+	public void setToken(String token) {
+		this.token = token;
+	}
+	/**
+	 * @return 凭证的有效时间
+	 * @see #setExpiresIn(String)
+	 */
+	public int getExpiresIn() {
+		return expiresIn;
+	}
+	/**
+	 * @param expiresIn
+	 * @see #getExpiresIn()
+	 */
+	public void setExpiresIn(int expiresIn) {
+		this.expiresIn = expiresIn;
+	}
+}

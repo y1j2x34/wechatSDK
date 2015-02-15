@@ -1,0 +1,42 @@
+package org.yjx.wechat;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.yjx.wechat.message.req.ReqBaseMessage;
+import org.yjx.wechat.message.resp.RespBaseMessage;
+
+public interface WeChatInterceptor {
+	/**
+	 * 拦截重复消息，最早调用
+	 * @param info
+	 * @param params
+	 * @return
+	 */
+	boolean duplicateHandle(DuplicateInfo info,Map<String,Object> params);
+	/**
+	 * 接收到用户消息请求时在业务处理前，duplicateHandle方法后调用
+	 * @param reqMessage
+	 * @param request TODO
+	 * @param response TODO
+	 * @param params TODO
+	 * @return true 表示继续处理业务，false 拦截过滤掉该请求！
+	 */
+	boolean preHandle(ReqBaseMessage reqMessage,HttpServletRequest request, HttpServletResponse response, Map<String, Object> params);
+	/**
+	 * 在业务处理器处理完后调用
+	 * @param reqMessage
+	 * @param respMessage
+	 * @param response TODO
+	 * @param params TODO
+	 */
+	void postHandle(ReqBaseMessage reqMessage,RespBaseMessage respMessage,HttpServletRequest request, HttpServletResponse response, Map<String,Object> params);
+	/**
+	 * 在业务完全处理完并且返回用户消息后调用
+	 * @param ex 
+	 * @param data
+	 */
+	void afterComplection(Map<String,Object> params,Exception ex);
+}

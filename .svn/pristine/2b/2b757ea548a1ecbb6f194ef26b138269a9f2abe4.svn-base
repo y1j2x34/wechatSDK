@@ -1,0 +1,31 @@
+package org.yjx.wechat.message.resp;
+
+import org.yjx.wechat.utils.MessageUtils;
+
+/**
+ * 音乐消息
+ * @author 杨建新
+ * @see RespBaseMessage
+ */
+public class RespMusicMessage extends RespBaseMessage {
+
+	private static final long serialVersionUID = -5152099396586526421L;
+	private Music Music;
+	public RespMusicMessage() {
+		setMsgType(MessageUtils.RESP_MESSAGE_TYPE_MUSIC);
+	}
+	/**
+	 * @return 语音
+	 * @see Music
+	 */
+	public Music getMusic() {
+		return Music;
+	}
+	/**
+	 * @param music
+	 * @see #getMusic()
+	 */
+	public void setMusic(Music music) {
+		this.Music = music;
+	}
+}

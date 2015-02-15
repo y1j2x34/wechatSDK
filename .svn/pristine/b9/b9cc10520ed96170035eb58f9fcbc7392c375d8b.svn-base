@@ -1,0 +1,120 @@
+package org.yjx.wechat.lstnr;
+
+import java.lang.reflect.Constructor;
+import java.lang.reflect.Method;
+import java.nio.charset.Charset;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+import javax.servlet.ServletContext;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+
+import org.apache.log4j.Logger;
+
+import org.yjx.wechat.AppContext;
+import org.yjx.wechat.Credential;
+import org.yjx.wechat.expt.CredentialInitializationException;
+import org.yjx.wechat.pojo.AccessToken;
+import org.yjx.wechat.utils.WeChatUtil;
+/**
+ * 微信公众平台应用初始化监听器
+ * <p>
+ * 初始化参数：
+ * <ul>
+ * 	<li>token</li>
+ * 	<li>encoding</li>
+ * 	<li>credential-class</li>
+ * </ul>
+ * </p>
+ * @author 杨建新
+ *
+ */
+public class WeChatPrepareListener implements ServletContextListener{
+	
+	private static final Logger LOG = Logger.getLogger(WeChatPrepareListener.class);
+	
+	public void contextDestroyed(ServletContextEvent sce) {
+		LOG.info("销毁.......");
+	}
+	@SuppressWarnings({ "unchecked", "unused" })
+	private Credential initCredential(String clsName){
+		Class<? extends Credential> type = null;
+		try {
+			type=(Class<? extends Credential>)Class.forName(clsName);
+			Constructor<? extends Credential> constr = type.getConstructor();
+			constr.setAccessible(true);
+			return constr.newInstance();
+		} catch (Exception e) {
+			throw new CredentialInitializationException(e);
+		} 
+	}
+	public void contextInitialized(ServletContextEvent sce) {
+		LOG.info("初始化上下文");
+		try {
+			ServletContext ctx = sce.getServletContext();
+			final String encoding = ctx.getInitParameter("encoding").trim();
+			final String folder;
+			if(ctx.getInitParameter("folder") != null){
+				folder = ctx.getInitParameter("folder").trim();
+			}else{
+				folder = null;
+			}
+			
+			ctx.removeAttribute("encoding");
+			ctx.removeAttribute("folder");
+			
+			
+			Method m = AppContext.class.getDeclaredMethod("init",AppContext.class);
+			m.setAccessible(true);
+			
+			
+			m.invoke(null, new AppContext(){
+				public Charset getCharset() {return Charset.forName(encoding);}
+				
+				public String getRootFolder() {return folder;}
+				private volatile long last_time = 0;
+				private AccessToken access_token;
+				public AccessToken getAccessToken(Credential credential) {
+					long current_time = System.currentTimeMillis()/1000;
+					if(access_token == null || current_time - last_time >= access_token.getExpiresIn())
+					{
+						LOG.info("当前时间："+current_time+"上次获取时间："+last_time+"时间差为："+(current_time-last_time));
+						LOG.info("重新从微信服务器读取access_token");
+						try {
+							access_token = WeChatUtil.getAccessToken(credential);
+						} catch (Exception e) {
+							e.printStackTrace();
+							LOG.error("获取access_token异常");
+							LOG.error(e.getMessage(),e);
+						}
+						last_time = current_time;
+					}
+					return access_token;
+				}
+				private Map<String,Object> datas = Collections.synchronizedMap(new HashMap<String,Object>());
+				@SuppressWarnings("unchecked")
+				public <D> D data(String id) {
+					return (D)datas.get(id);
+				}
+				public Object data(String id, Object data) {
+					return datas.put(id, data);
+				};
+				private Properties codeProp = new Properties();
+				{
+					codeProp.load(AppContext.class.getClassLoader().getResourceAsStream("retn_code.properties"));
+					LOG.info(codeProp.toString());
+				}
+				public String wechat_return_msg(int code) {
+					return codeProp.getProperty(String.valueOf(code));
+				}
+			});
+		} catch (Exception e) {
+			LOG.error("初始化失败！");
+			e.printStackTrace();
+		}
+	}
+	
+}

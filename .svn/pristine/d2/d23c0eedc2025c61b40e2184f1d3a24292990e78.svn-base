@@ -1,0 +1,32 @@
+package org.yjx.wechat.message.svc;
+/**
+ * 客服消息——图文消息模型
+ * <hr/>
+ *
+ */
+public class SvArticle extends Svtd{
+
+	private static final long serialVersionUID = -5506234496567208787L;
+	
+	private String url;
+	private String picurl;
+	/**
+	 * 原文链接
+	 */
+	public String getUrl() {
+		return url;
+	}
+	public void setUrl(String url) {
+		this.url = url;
+	}
+	/**
+	 * 图片链接，支持JPG、PNG格式，较好的效果为大图640*320，小图80*80
+	 */
+	public String getPicurl() {
+		return picurl;
+	}
+	public void setPicurl(String picurl) {
+		this.picurl = picurl;
+	}
+	
+}

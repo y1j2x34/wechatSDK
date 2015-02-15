@@ -1,0 +1,21 @@
+package org.yjx.wechat;
+
+import org.yjx.wechat.message.req.ReqBaseMessage;
+/**
+ * 重试信息
+ * @author 杨建新
+ */
+public final class DuplicateInfo{
+	private final ReqBaseMessage content;
+	private final int times;
+	public DuplicateInfo(ReqBaseMessage content,int times) {
+		this.content = content;
+		this.times = times;
+	}
+	public ReqBaseMessage getContent() {
+		return content;
+	}
+	public int getTimes() {
+		return times;
+	}
+}

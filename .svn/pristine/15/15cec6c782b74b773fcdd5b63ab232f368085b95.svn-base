@@ -1,0 +1,107 @@
+package org.yjx.wechat.utils;
+
+import java.beans.BeanInfo;
+import java.beans.IntrospectionException;
+import java.beans.Introspector;
+import java.beans.PropertyDescriptor;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.List;
+
+public class ReflectUtils{
+	/**
+	 * 穷举获取类及其父类声明的字段
+	 * @param name
+	 * @param type
+	 * @return
+	 */
+	public static final Field getField(String name,Class<?> type){
+		try {
+			return type.getDeclaredField(name);
+		} catch (Exception e) {
+			try {
+				return type.getField(name);
+			} catch (Exception e2) {
+				Class<?> superClass = type.getSuperclass();
+				if(superClass != null)
+					return getField(name, superClass);
+			}
+		}
+		return null;
+	}
+	/**
+	 * 穷举获取类及其父类（不包括<code>Object<code>类）定义了的方法
+	 * @param name
+	 * @param type
+	 * @param paramTypes
+	 * @return
+	 */
+	public static final Method getMethod(String name,Class<?> type,Class<?>...paramTypes){
+		try {
+			return type.getDeclaredMethod(name, paramTypes);
+		} catch (Exception e) {
+			try {
+				return type.getMethod(name, paramTypes);
+			}catch(Exception e2){
+				Class<?> superClass = type.getSuperclass();
+				if(superClass != null)
+					return getMethod(name, superClass, paramTypes);
+			}
+			return null;
+		}
+	}
+	@SuppressWarnings("unchecked")
+	public static final <T> T convert(String str,Class<? extends T> type){
+		if(type == String.class){
+			return (T)str;
+		}else if(type == Integer.class || type == int.class){
+			return (T)new Integer(Integer.parseInt(str));
+		}else if(type == Long.class || type == long.class){
+			return (T)new Long(Long.parseLong(str));
+		}else if(type == Double.class || type == double.class){
+			return (T)new Double(Double.parseDouble(str));
+		}
+		return null;
+	}
+	public static PropertyDescriptor[] getBeanProperties(Class<?> type){
+        return getPropertiesHelper(type, true, true);
+    }
+	/**
+	 * 或的Bean的Setter方法
+	 * @param type
+	 * @return
+	 */
+	public static PropertyDescriptor[] getBeanGetters(Class<?> type){
+        return getPropertiesHelper(type, true, false);
+    }
+	/**
+	 * 获得Bean的Getter方法
+	 * @param type
+	 * @return
+	 */
+    public static PropertyDescriptor[] getBeanSetters(Class<?> type){
+        return getPropertiesHelper(type, false, true);
+    }
+	private static PropertyDescriptor[] getPropertiesHelper(Class<?> type, boolean read, boolean write){
+        PropertyDescriptor all[];
+        try {
+        	BeanInfo info = Introspector.getBeanInfo(type, Object.class);
+        	all = info.getPropertyDescriptors();
+        	if(read && write)
+        		return all;
+        	List<PropertyDescriptor> properties;
+        	properties = new ArrayList<PropertyDescriptor>(all.length);
+        	for(int i = 0; i < all.length; i++)
+        	{
+        		PropertyDescriptor pd = all[i];
+        		if(read && pd.getReadMethod() != null || write && pd.getWriteMethod() != null)
+        			properties.add(pd);
+        	}
+        	
+        	return (PropertyDescriptor[])properties.toArray(new PropertyDescriptor[properties.size()]);
+		} catch (IntrospectionException e) {
+			return null;
+		}
+    }
+}

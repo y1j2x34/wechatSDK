@@ -1,0 +1,21 @@
+package org.yjx.wechat;
+
+/**
+ * 存储开发者凭据信息
+ * 
+ * @author 杨建新
+ */
+public abstract class Credential {
+	/**
+	 * 开发者凭据——建议使用硬编码方式
+	 * 
+	 * @return
+	 */
+	public abstract String getAppId();
+
+	/**
+	 * @see #getAppId()
+	 * @return
+	 */
+	public abstract String getAppSecret();
+}

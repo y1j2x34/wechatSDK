@@ -1,0 +1,24 @@
+package org.yjx.wechat;
+
+import org.yjx.wechat.message.req.ReqBaseMessage;
+import org.yjx.wechat.message.resp.RespBaseMessage;
+
+public interface WeChatListener {
+	Object beforeProcessMessage(ReqBaseMessage message,Object params);
+	/**
+	 * 处理重试消息
+	 * @param message 请求消息
+	 * @param params
+	 * @param count 重试次数
+	 * @deprecated 改用拦截器
+	 */
+	void duplicateMessage(ReqBaseMessage message,Object params, int count);
+	/**
+	 * 
+	 * @param resp 响应给用户的消息
+	 * @param message 接收到用户的消息
+	 * @param params 
+	 * @param bdata {@link #beforeProcessMessage(ReqBaseMessage, Object)}返回的数据
+	 */
+	void afterProcessedMessage(RespBaseMessage resp,ReqBaseMessage message,Object params,Object bdata);
+}

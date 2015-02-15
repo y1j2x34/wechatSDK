@@ -1,0 +1,34 @@
+package y1j2x34.wechat.message.svc;
+
+import java.io.Serializable;
+/**
+ * 音乐、图文、视频消息模型基类
+ * @author 杨建新
+ * @see SvMusic
+ * @see SvArticle
+ * @see SvVideo
+ */
+class Svtd implements Serializable{
+	private static final long serialVersionUID = 1897366191216805916L;
+	
+	private String title;
+	private String description;
+	/**
+	 * 图文消息标题
+	 */
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	/**
+	 * 描述信息
+	 */
+	public String getDescription() {
+		return description;
+	}
+	public void setDescription(String description) {
+		this.description = description;
+	}
+}

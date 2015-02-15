@@ -1,0 +1,17 @@
+package org.yjx.wechat.message.svc;
+
+public class SvNewsMessage extends SvBaseMessage{
+
+	private static final long serialVersionUID = -8101619473979667908L;
+	
+	private SvArticle news;
+
+	public SvArticle getNews() {
+		return news;
+	}
+
+	public void setNews(SvArticle news) {
+		this.news = news;
+	}
+	
+}

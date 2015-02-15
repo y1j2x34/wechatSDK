@@ -1,0 +1,36 @@
+package org.yjx.wechat;
+
+import java.util.Map;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.yjx.wechat.message.req.ReqBaseMessage;
+import org.yjx.wechat.message.resp.RespBaseMessage;
+
+public abstract class WeChatInterceptorAdapter implements WeChatInterceptor {
+
+	@Override
+	public boolean preHandle(ReqBaseMessage reqMessage,
+			HttpServletRequest request, HttpServletResponse response,
+			Map<String, Object> params) {
+		return true;
+	}
+
+	@Override
+	public void postHandle(ReqBaseMessage reqMessage,
+			RespBaseMessage respMessage, HttpServletRequest request,
+			HttpServletResponse response, Map<String, Object> params) {
+	}
+
+	@Override
+	public boolean duplicateHandle(DuplicateInfo info,
+			Map<String, Object> params) {
+		return true;
+	}
+
+	@Override
+	public void afterComplection(Map<String, Object> params, Exception ex) {
+	}
+
+}

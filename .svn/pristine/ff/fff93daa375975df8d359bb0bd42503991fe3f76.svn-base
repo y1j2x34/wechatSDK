@@ -1,0 +1,148 @@
+package org.yjx.wechat.utils;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.DigestInputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
+import sun.misc.BASE64Decoder;
+import sun.misc.BASE64Encoder;
+/**
+ * <pre>
+ * 所有输出：
+ * 	大小写：大写，
+ * 	字符集：16进制，
+ *  单个字符占：8（ASCII）位，
+ * </pre>
+ * @author 杨建新
+ */
+@SuppressWarnings("restriction")
+public class DigestUtils {
+	
+	private static MessageDigest create(String type){
+		try {
+			return MessageDigest.getInstance(type);
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(e);
+		}
+	}
+	
+	public static String md5(String text){
+		byte[] digest = create("MD5").digest(text.getBytes());
+		return byteToStr(digest);
+	}
+	/**
+	 * 可以用于计算文件和其它任何输入流的md5值
+	 * @param input
+	 * @return
+	 */
+	public static String md5(InputStream input){
+		return md5(input, 1024, null);
+	}
+	public static interface CallBack{
+		void call(byte[] buff);
+	}
+	public static String md5(InputStream input,int bufSize,CallBack cb){
+		if(bufSize <= 0)
+			throw new IllegalArgumentException("the value of 'bufSize' must be greater then 0:"+bufSize);
+		if(cb == null){
+			cb = new CallBack() {
+				public void call(byte[] buff) {}
+			};
+		}
+		try {
+			MessageDigest mdigest = create("MD5");
+			DigestInputStream digestInput = new DigestInputStream(input, mdigest);
+			try {
+				byte[] buff = new byte[bufSize];
+				while(digestInput.read(buff) > 0){
+					mdigest = digestInput.getMessageDigest();
+					cb.call(buff);
+				}
+				return byteToStr(mdigest.digest());
+			} finally{
+				digestInput.close();
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	public static String sha1(String text){
+		byte[] digest = create("SHA-1").digest(text.getBytes());
+		return byteToStr(digest);
+	}
+	public static String base64Encode(String text){
+		return new BASE64Encoder().encode(text.getBytes());
+	}
+	public static String base64Decode(String text){
+		try {
+			return new String(new BASE64Decoder().decodeBuffer(text));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		return null;
+	}
+	
+	/**
+	 * 将字节数组转换为十六进制字符串
+	 * 
+	 * @param byteArray
+	 * @return
+	 */
+	private static String byteToStr(byte[] byteArray) {
+		String strDigest = "";
+		for (int i = 0; i < byteArray.length; i++) {
+			strDigest += byteToHexStr(byteArray[i]);
+		}
+		return strDigest;
+	}
+	
+	/**
+	 * 将字节转换为十六进制字符串
+	 * 
+	 * @param mByte
+	 * @return
+	 */
+	private static String byteToHexStr(byte mByte) {
+		char[] Digit = { '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+		char[] tempArr = new char[2];
+		tempArr[0] = Digit[(mByte >>> 4) & 0X0F];
+		tempArr[1] = Digit[mByte & 0X0F];
+
+		String s = new String(tempArr);
+		return s;
+	}
+	/**
+	 * 加密字符串
+	 * @param b
+	 * @return
+	 */
+	public static String x(String b){
+		char[] b64 = base64Encode(b).toCharArray();
+		for(int i=0;i<b64.length;i++){
+			b64[i] = (char)(b64[i]&13 + 32);
+		}
+		return sha1(new String(b64));
+	}
+	/**
+	 * 随机字符串
+	 * @deprecated 功能未完美实现，暂时不可用
+	 * <hr/>
+	 * @param len 长度
+	 * @param format 格式 <br/>
+	 * 	<ul>例：
+	 *  <li> 范围：<p>[a-z] 表示在a-z的范围内生成	,生成 16进制："[0-9a-f]"</p></li>
+	 *  <li> 格式化：<p>字符串(%s{length})，整数(%d{length}),小数(%f{total,decimalLength}),数字字母下划线(%w{length}),任意字符(.或者空)，与%w相反%W{length}</p></li>
+	 *  </ul>
+	 *  456as_asdaszsdsa_4523->[0-9a-f]
+	 * @see RandStr
+	 * @return
+	 */
+	public static String random(int len,String format){
+		
+		return null;
+	}
+}

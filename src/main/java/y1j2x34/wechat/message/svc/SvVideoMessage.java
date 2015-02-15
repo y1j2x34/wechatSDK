@@ -1,0 +1,15 @@
+package y1j2x34.wechat.message.svc;
+
+public class SvVideoMessage extends SvBaseMessage{
+	private static final long serialVersionUID = -6753595675297813350L;
+	
+	private SvVideo video;
+
+	public SvVideo getVideo() {
+		return video;
+	}
+
+	public void setVideo(SvVideo video) {
+		this.video = video;
+	}
+}

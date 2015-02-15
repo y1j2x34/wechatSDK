@@ -1,0 +1,6 @@
+package org.yjx.wechat;
+
+public interface LifeCycle {
+	void onCreate();
+	void onDestroy();
+}

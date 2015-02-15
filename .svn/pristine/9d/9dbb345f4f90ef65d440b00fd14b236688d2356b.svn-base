@@ -1,0 +1,26 @@
+package org.yjx.wechat.message.req;
+/**
+ * 请求多媒体消息基类
+ * @see ReqImageMessage
+ * @see ReqVoiceMessage
+ * @see 
+ */
+public class ReqMediaMessage extends ReqBaseMessage{
+
+	private static final long serialVersionUID = 153823066434864264L;
+	private String MediaId;
+	/**
+	 * @return 媒体 ID,可以调用多媒体文件下载接口拉取数据。
+	 * @see #setMediaId(String)
+	 */
+	public String getMediaId() {
+		return MediaId;
+	}
+	/**
+	 * @param mediaId
+	 * @see #getMediaId()
+	 */
+	public void setMediaId(String mediaId) {
+		this.MediaId = mediaId;
+	}
+}

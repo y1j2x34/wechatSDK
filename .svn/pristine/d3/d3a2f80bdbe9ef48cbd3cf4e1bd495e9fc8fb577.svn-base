@@ -1,0 +1,33 @@
+package org.yjx.wechat.pojo;
+/** 
+ * 普通按钮（子按钮）
+ * @author 杨建新
+ * @date 2013-12-26 
+ * @see EventButton
+ */  
+@Deprecated
+public class CommonButton extends Button {  
+    private String type;  
+    private String key;  
+    public CommonButton() {
+    	setType("click");
+    }
+    public String getType() {  
+        return type;  
+    }  
+  
+    public void setType(String type) {  
+        this.type = type;  
+    }  
+  /**
+   * 菜单KEY值，用于消息接口推送，不超过128字节
+   * @return
+   */
+    public String getKey() {  
+        return key;  
+    }  
+  
+    public void setKey(String key) {  
+        this.key = key;  
+    }  
+}  

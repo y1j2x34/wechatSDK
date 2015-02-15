@@ -1,0 +1,34 @@
+package org.yjx.wechat.message.req;
+
+import org.yjx.wechat.utils.MessageUtils;
+
+/**
+ * 语音消息
+ * <hr/>
+ * @author 杨建新
+ * @see ReqBaseMessage
+ * @see ReqMediaMessage
+ */
+public class ReqVoiceMessage extends ReqMediaMessage{
+
+	private static final long serialVersionUID = -655838341999698934L;
+	
+	private String Format;
+	public ReqVoiceMessage() {
+		setMsgType(MessageUtils.REQ_MESSAGE_TYPE_VOICE);
+	}
+	/**
+	 * @return 语音格式
+	 * @see #setFormat(String)
+	 */
+	public String getFormat() {
+		return Format;
+	}
+	/**
+	 * @param format
+	 * @see #getFormat()
+	 */
+	public void setFormat(String format) {
+		this.Format = format;
+	}
+}
