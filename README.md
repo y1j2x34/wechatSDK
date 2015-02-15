@@ -139,13 +139,13 @@ public class MessageInterceptor implements WechatInterceptor{
 ```
 ### 5. 接口调用
 
-1. 获取access_token
+1.获取access_token
 ```
 	//access_token过期会自动刷新
 	AccessToken accessToken = AppContext.getInstance().getAccessToken(credential);
 ```
-2. 删除菜单
+2.删除菜单
 ```
 	WeChatUtils.deleteMenu(AppContext.getInstance().getAccessToken(credential));	
 ```
-3. ....
+3.……
