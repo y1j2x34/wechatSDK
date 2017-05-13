@@ -33,7 +33,7 @@
 ```
 ### 2. spring 配置
 ```
-<bean class="com.upower.wechat.WechatCoreService" init-method="onCreate" destroy-method="onDestroy" id="wechatCoreService">
+<bean class="y1j2x34.wechat.WechatCoreService" init-method="onCreate" destroy-method="onDestroy" id="wechatCoreService">
 		  <property name="processor" ref="myProcessor"/><!-- 消息处理器  -->
 		  <property name="interceptors"><!-- 拦截器  -->
 		    <list>
